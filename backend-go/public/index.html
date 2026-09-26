@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eksses Payment api {EPA}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --surface2:  #181c24;
+    --border:    #1e2330;
+    --border2:   #2a3048;
+    --teal:      #00d4aa;
+    --teal-dim:  #00d4aa22;
+    --blue:      #4d9fff;
+    --amber:     #f59e0b;
+    --red:       #f43f5e;
+    --green:     #22c55e;
+    --muted:     #4a5568;
+    --text:      #e2e8f0;
+    --text-dim:  #718096;
+    --font:      'Inter', sans-serif;
+    --mono:      'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 13px; }
+
+  /* ── Header ── */
+  header { display: flex; align-items: center; gap: 12px; padding: 0 20px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .logo { font-size: 15px; font-weight: 700; color: var(--teal); letter-spacing: -0.3px; }
+  .logo span { color: var(--text-dim); font-weight: 400; }
+  .ws-status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  .dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .header-time { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 16px; }
+
+  /* ── Layout ── */
+  .workspace { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Left sidebar ── */
+  aside { width: 320px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .section-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+  label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; margin-top: 10px; }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; padding: 7px 10px; border-radius: 6px;
+    border: 1px solid var(--border2); background: var(--surface2);
+    color: var(--text); font-family: var(--mono); font-size: 12px;
+    outline: none; transition: border-color 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--teal); }
+  textarea { resize: vertical; min-height: 52px; }
+
+  .sim-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .sim-badge { background: var(--teal-dim); border: 1px solid var(--teal)44; color: var(--teal); border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 500; }
+
+  /* Timing row */
+  .timing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .timing-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  .btn { width: 100%; padding: 9px 14px; border-radius: 6px; border: none; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 12px; }
+  .btn-primary { background: var(--teal); color: #000; }
+  .btn-primary:hover { background: #00bfa0; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--muted); color: var(--surface); cursor: default; }
+
+  /* ── Main content ── */
+  main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; background: var(--surface); flex-shrink: 0; }
+  .tab { padding: 12px 16px; font-size: 12px; font-weight: 500; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+  .tab-panels { flex: 1; overflow: hidden; position: relative; }
+  .tab-panel { position: absolute; inset: 0; overflow: auto; display: none; padding: 16px; }
+  .tab-panel.active { display: block; }
+
+  /* ── Execution table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: var(--surface); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; font-weight: 600; }
+  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; font-family: var(--mono); }
+  tbody tr:hover td { background: var(--surface2); }
+  .exec-id { color: var(--muted); font-size: 10px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .resp-cell { max-width: 380px; white-space: pre-wrap; word-break: break-word; color: var(--text); line-height: 1.5; }
+
+  /* Status badges */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; white-space: nowrap; font-family: var(--font); }
+  .badge-success, .badge-success_forced { background: #00d4aa15; color: var(--teal); border: 1px solid var(--teal)40; }
+  .badge-info      { background: #4d9fff15; color: var(--blue);  border: 1px solid var(--blue)40; }
+  .badge-live_menu { background: #8b5cf615; color: #a78bfa;     border: 1px solid #a78bfa40; }
+  .badge-warning   { background: #f59e0b15; color: var(--amber); border: 1px solid var(--amber)40; }
+  .badge-timeout, .badge-failed, .badge-error { background: #f43f5e15; color: var(--red); border: 1px solid var(--red)40; }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* ── Log feed ── */
+  .log-feed { font-family: var(--mono); font-size: 11px; line-height: 1.7; }
+  .log-entry { padding: 3px 0; border-bottom: 1px solid var(--border)88; }
+  .log-ts { color: var(--muted); margin-right: 8px; }
+  .log-device { color: var(--blue); font-weight: 500; }
+  .log-success { color: var(--teal); }
+  .log-info    { color: var(--blue); }
+  .log-warning { color: var(--amber); }
+  .log-error, .log-failed, .log-timeout { color: var(--red); }
+
+  /* ── SMS panel ── */
+  .sms-entry { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+  .sms-from { font-size: 10px; font-weight: 600; color: var(--amber); }
+  .sms-body { margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+  .sms-time { float: right; font-size: 10px; color: var(--muted); }
+
+  /* ── Device card ── */
+  .device-list { display: flex; flex-direction: column; gap: 6px; }
+  .device-card { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; transition: border-color 0.15s; }
+  .device-card.selected { border-color: var(--teal); }
+  .device-card:hover { border-color: var(--border2); }
+  .device-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); flex-shrink: 0; }
+  .device-name { font-weight: 500; font-size: 12px; flex: 1; }
+  .device-sims { font-size: 10px; color: var(--text-dim); }
+
+  .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 12px; }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  /* scroll bars */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Eksses Payment api <span>{EPA}</span></div>
+  <div class="ws-status">
+    <div class="dot" id="wsDot"></div>
+    <span id="wsLabel">Connecting…</span>
+  </div>
+  <div class="header-time" id="clock"></div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── Sidebar ── -->
+  <aside>
+
+    <!-- Devices -->
+    <div class="section">
+      <div class="section-title">Connected Devices</div>
+      <div class="device-list" id="deviceList">
+        <div class="empty-state"><div class="empty-icon">📡</div>Waiting for devices…</div>
+      </div>
+    </div>
+
+    <!-- SIM -->
+    <div class="section">
+      <div class="section-title">SIM Slot</div>
+      <div class="sim-badges" id="simBadges"></div>
+      <label style="margin-top:8px">Select SIM</label>
+      <select id="simSlot">
+        <option value="">Default SIM</option>
+      </select>
+    </div>
+
+    <!-- Command -->
+    <div class="section">
+      <div class="section-title">USSD Command</div>
+      <label>USSD Code</label>
+      <input type="text" id="ussdCode" placeholder="e.g. *247#" value="*247#">
+      <label>Multi-Step Inputs <span style="color:var(--muted)">(comma separated)</span></label>
+      <input type="text" id="ussdSteps" placeholder="e.g. 1, 0179123456, 100, ,1234">
+    </div>
+
+    <!-- Timing Controls -->
+    <div class="section">
+      <div class="section-title">⚙️ Timing Controls <span style="color:var(--teal);font-size:9px;text-transform:none;letter-spacing:0">(no recompile needed)</span></div>
+
+      <div class="timing-row">
+        <div>
+          <label>Grace Period (ms)</label>
+          <input type="number" id="gracePeriod" value="3500" min="500" max="10000" step="500">
+          <div class="timing-hint">Blocks ghost inputs from dialer</div>
+        </div>
+        <div>
+          <label>Step Cooldown (ms)</label>
+          <input type="number" id="stepCooldown" value="2000" min="500" max="8000" step="250">
+          <div class="timing-hint">Waits between each menu step</div>
+        </div>
+      </div>
+
+      <div class="timing-row" style="margin-top:8px">
+        <div>
+          <label>Input Delay (ms)</label>
+          <input type="number" id="inputDelay" value="300" min="100" max="2000" step="100">
+          <div class="timing-hint">Text → Send button delay</div>
+        </div>
+        <div>
+          <label>Tier 2 Timeout (ms)</label>
+          <input type="number" id="tier2Timeout" value="30000" min="5000" max="60000" step="5000">
+          <div class="timing-hint">Max wait for A11y capture</div>
+        </div>
+      </div>
+
+      <button class="btn" id="resetTimings" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border2);margin-top:8px">↺ Reset to Defaults</button>
+    </div>
+
+    <!-- Execute -->
+    <div class="section">
+      <button class="btn btn-primary" id="execBtn" onclick="sendUSSD()">▶ Execute USSD</button>
+    </div>
+
+  </aside>
+
+  <!-- ── Main ── -->
+  <main>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('executions', this)">Execution Tracker</div>
+      <div class="tab" onclick="switchTab('events', this)">Live Events</div>
+      <div class="tab" onclick="switchTab('phonelogs', this)">📱 Phone Console <span id="phoneLogBadge" style="display:none;background:var(--teal);color:#000;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px">0</span></div>
+      <div class="tab" onclick="switchTab('sms', this)">SMS Interceptor <span id="smsBadge" style="display:none;background:var(--amber);color:#000;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px">0</span></div>
+    </div>
+    <div class="tab-panels">
+
+      <!-- Executions -->
+      <div class="tab-panel active" id="panel-executions">
+        <table id="execTable">
+          <thead>
+            <tr>
+              <th style="width:70px">Time</th>
+              <th style="width:90px">Device</th>
+              <th style="width:150px">Exec ID</th>
+              <th style="width:110px">Status</th>
+              <th>Response</th>
+            </tr>
+          </thead>
+          <tbody id="execBody">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">⚡</div>No executions yet — send a USSD command</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Events log -->
+      <div class="tab-panel" id="panel-events">
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+
+      <!-- Phone Console -->
+      <div class="tab-panel" id="panel-phonelogs">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1">
+          <span style="font-size:11px;color:var(--text-dim)" id="phoneLogCount">0 entries</span>
+          <button onclick="copyPhoneLogs()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">📋 Copy All</button>
+        </div>
+        <div class="log-feed" id="phoneLogFeed" style="padding:8px 12px"></div>
+      </div>
+
+      <!-- SMS -->
+      <div class="tab-panel" id="panel-sms">
+        <div id="smsContainer"><div class="empty-state"><div class="empty-icon">📬</div>No SMS intercepted yet</div></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const devices = new Set();
+  const deviceSims = {};
+  const execRows = {};
+  const smsStore = new Map(); // Keyed by hash(sender+body+timestamp)
+  let selectedDevice = null;
+  let firstExec = true;
+  let smsCount = 0;
+
+  // ── Clock ──────────────────────────────────────────────────────────────────
+  const clockEl = document.getElementById('clock');
+  setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString(); }, 1000);
+
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  const wsDot   = document.getElementById('wsDot');
+  const wsLabel = document.getElementById('wsLabel');
+  const ws = new WebSocket(`ws://${location.host}/ui`);
+
+  ws.onopen = () => { wsDot.classList.add('online'); wsLabel.textContent = 'Dashboard connected'; };
+  ws.onclose = () => { wsDot.classList.remove('online'); wsLabel.textContent = 'Disconnected'; };
+
+  ws.onmessage = ({ data }) => {
+    const d = JSON.parse(data);
+    const ts = new Date().toLocaleTimeString();
+    switch (d.type) {
+      case 'DEVICE_STATUS':  handleDeviceStatus(d, ts); break;
+      case 'DEVICE_SIMS':    handleDeviceSims(d, ts);   break;
+      case 'USSD_RESULT':    handleResult(d, ts);        break;
+      case 'DEVICE_SMS':     handleSms(d, ts);           break;
+      case 'PHONE_LOG':      handlePhoneLog(d, ts);      break;
+      case 'LOG':            logEvent('info', '', d.message, ts); break;
+      default:               logEvent('info', '', JSON.stringify(d).slice(0,120), ts);
+    }
+  };
+
+  // ── Device status ──────────────────────────────────────────────────────────
+  function handleDeviceStatus(d, ts) {
+    if (d.status === 'CONNECTED') {
+      devices.add(d.device);
+      logEvent('success', d.device, 'Connected', ts);
+    } else {
+      devices.delete(d.device);
+      delete deviceSims[d.device];
+      if (selectedDevice === d.device) selectedDevice = null;
+      logEvent('error', d.device, 'Disconnected', ts);
+    }
+    refreshDeviceList();
+    refreshDevices();
+  }
+
+  function handleDeviceSims(d, ts) {
+    deviceSims[d.device] = d.sims || [];
+    renderSimInfo(d.device);
+    logEvent('info', d.device, `SIM info: ${(d.sims||[]).map(s=>`SIM${s.slot}:${s.carrier}`).join(', ')}`, ts);
+  }
+
+  // ── Execution results ──────────────────────────────────────────────────────
+  function handleResult(d, ts) {
+    const { execution_id, status, response, device } = d;
+    const badgeCls = `badge badge-${status}`;
+    const icon = {success:'✅',success_forced:'✅',info:'ℹ️',live_menu:'📺',warning:'⚠️',timeout:'⏱',failed:'❌',error:'❌'}[status]||'?';
+
+    logEvent(status, device, response.slice(0,160), ts);
+
+    // Execution tracker table
+    if (execRows[execution_id]) {
+      const row = execRows[execution_id];
+      const sc = row.querySelector('.status-cell');
+      const rc = row.querySelector('.resp-cell');
+      const priority = {info:0,live_menu:0,warning:1,timeout:2,failed:3,error:3,success:4,success_forced:4};
+      const cur = sc.dataset.status || 'info';
+      if ((priority[status]||0) >= (priority[cur]||0)) {
+        sc.innerHTML = `<span class="${badgeCls}">${status}</span>`;
+        sc.dataset.status = status;
+      }
+      // Append new text (only if substantial — skip pure "info" progress messages if final already shown)
+      if (status === 'live_menu' || (status !== 'info' || !sc.dataset.status.startsWith('success'))) {
+        rc.textContent += (rc.textContent ? '\n──\n' : '') + response;
+      }
+    } else {
+      if (firstExec) { document.getElementById('execBody').innerHTML = ''; firstExec = false; }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:var(--muted);white-space:nowrap;font-size:10px">${ts}</td>
+        <td style="color:var(--blue);font-size:11px">${device}</td>
+        <td class="exec-id" title="${execution_id}">${execution_id}</td>
+        <td class="status-cell" data-status="${status}"><span class="${badgeCls}">${status}</span></td>
+        <td class="resp-cell">${response}</td>`;
+      document.getElementById('execBody').prepend(tr);
+      execRows[execution_id] = tr;
+    }
+  }
+
+  // ── SMS ────────────────────────────────────────────────────────────────────
+  function handleSms(d, ts) {
+    const sender = d.sender || 'Unknown';
+    const body = d.body || '';
+    const rawTs = d.timestamp || Date.now();
+    const hash = `${sender}|${body}|${rawTs}`;
+
+    if (smsStore.has(hash)) return; // DEDUP
+    smsStore.set(hash, true);
+
+    smsCount++;
+    const badge = document.getElementById('smsBadge');
+    badge.style.display = 'inline';
+    badge.textContent = smsCount;
+
+    const container = document.getElementById('smsContainer');
+    if (container.querySelector('.empty-state')) container.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'sms-entry';
+    el.innerHTML = `<div class="sms-from">${sender} <span class="sms-time">${ts}</span></div>
+                    <div class="sms-body">${escHtml(body)}</div>`;
+    container.prepend(el);
+    logEvent('warning', d.device||'', `SMS from ${sender}: ${body.slice(0,80)}`, ts);
+  }
+
+  // ── Log feed ───────────────────────────────────────────────────────────────
+  function logEvent(status, device, message, ts) {
+    const feed = document.getElementById('logFeed');
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    const cls = `log-${status}`;
+    div.innerHTML = `<span class="log-ts">${ts}</span>${device?`<span class="log-device">[${device}]</span> `:''}` +
+      `<span class="${cls}">${escHtml(message)}</span>`;
+    feed.prepend(div);
+    // Keep max 400 entries
+    while (feed.children.length > 400) feed.removeChild(feed.lastChild);
+  }
+
+  // ── Devices ────────────────────────────────────────────────────────────────
+  function refreshDeviceList() {
+    const list = document.getElementById('deviceList');
+    if (!devices.size) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div>Waiting for devices…</div>';
+      return;
+    }
+    list.innerHTML = '';
+    devices.forEach(dev => {
+      const sims = deviceSims[dev] || [];
+      const simStr = sims.length ? sims.map(s=>`SIM${s.slot}:${s.carrier}`).join(', ') : 'No SIM data yet';
+      const card = document.createElement('div');
+      card.className = 'device-card' + (dev === selectedDevice ? ' selected' : '');
+      card.innerHTML = `<div class="device-dot"></div>
+        <div><div class="device-name">${dev}</div><div class="device-sims">${simStr}</div></div>`;
+      card.onclick = () => { selectedDevice = dev; renderSimInfo(dev); refreshDeviceList(); };
+      list.append(card);
+    });
+    if (!selectedDevice && devices.size) selectedDevice = [...devices][0];
+  }
+
+  function renderSimInfo(device) {
+    const simSlot = document.getElementById('simSlot');
+    const simBadges = document.getElementById('simBadges');
+    simSlot.innerHTML = '<option value="">Default SIM</option>';
+    simBadges.innerHTML = '';
+    const sims = deviceSims[device] || [];
+    sims.forEach(sim => {
+      const badge = document.createElement('span');
+      badge.className = 'sim-badge';
+      badge.textContent = `SIM ${sim.slot}: ${sim.carrier}`;
+      simBadges.append(badge);
+      const opt = document.createElement('option');
+      opt.value = sim.slot; opt.textContent = `SIM ${sim.slot}: ${sim.carrier}`;
+      simSlot.append(opt);
+    });
+  }
+
+  async function refreshDevices() {
+    try {
+      const r = await fetch('/api/devices');
+      const j = await r.json();
+      (j.devices || []).forEach(dev => {
+        devices.add(dev);
+        if (j.sims && j.sims[dev]) deviceSims[dev] = j.sims[dev];
+      });
+      if (!selectedDevice && devices.size) selectedDevice = [...devices][0];
+      refreshDeviceList();
+      if (selectedDevice) renderSimInfo(selectedDevice);
+    } catch(e) {}
+  }
+
+  // ── Send USSD ──────────────────────────────────────────────────────────────
+  async function sendUSSD() {
+    const device = selectedDevice;
+    if (!device) return alert('Select a device first');
+    const code = document.getElementById('ussdCode').value.trim();
+    if (!code) return alert('Enter a USSD code');
+
+    const stepsRaw = document.getElementById('ussdSteps').value.trim();
+    const steps = stepsRaw ? stepsRaw.split(',').map(s => s.trim()) : [];
+
+    const simVal = document.getElementById('simSlot').value;
+    const grace  = parseInt(document.getElementById('gracePeriod').value)  || 3500;
+    const cool   = parseInt(document.getElementById('stepCooldown').value) || 2000;
+    const delay  = parseInt(document.getElementById('inputDelay').value)   || 300;
+    const tier2  = parseInt(document.getElementById('tier2Timeout').value) || 30000;
+
+    const body = {
+      device, ussd_code: code, steps,
+      timeout: tier2,
+      grace_period_ms:    grace,
+      step_cooldown_ms:   cool,
+      step_input_delay_ms: delay,
+      tier2_timeout_ms:   tier2
+    };
+    if (simVal !== '') body.sim_slot = parseInt(simVal);
+
+    const btn = document.getElementById('execBtn');
+    btn.disabled = true; btn.textContent = '⏳ Sending…';
+
+    const ts = new Date().toLocaleTimeString();
+    logEvent('info', device, `↗ Sending ${code} [grace=${grace}ms cool=${cool}ms delay=${delay}ms]`, ts);
+
+    try {
+      const res = await fetch('/api/trigger', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const json = await res.json();
+      if (!json.success) { alert(json.error || 'Failed'); logEvent('error', device, json.error, ts); }
+    } catch(e) { alert('Network error: ' + e.message); }
+
+    btn.disabled = false; btn.textContent = '▶ Execute USSD';
+  }
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  // ── Phone log feed ──────────────────────────────────────────────────────────
+  let phoneLogCount = 0;
+  const phoneLogLines = [];
+  function handlePhoneLog(d, ts) {
+    const msg = d.message || '';
+    phoneLogLines.push(msg);
+    phoneLogCount++;
+    const badge = document.getElementById('phoneLogBadge');
+    badge.style.display = 'inline';
+    badge.textContent = phoneLogCount;
+    document.getElementById('phoneLogCount').textContent = phoneLogCount + ' entries';
+    const feed = document.getElementById('phoneLogFeed');
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    const color = msg.includes('[ERROR]') ? 'var(--red)'
+      : msg.includes('[DEBUG]') && (msg.includes('✅') || msg.includes('success')) ? 'var(--teal)'
+      : msg.includes('⚠️') ? 'var(--amber)'
+      : msg.includes('💓') ? 'var(--green)'
+      : 'var(--text-dim)';
+    div.innerHTML = `<span class="log-ts">${ts}</span><span style="color:${color};font-family:var(--mono);font-size:11px">${escHtml(msg)}</span>`;
+    feed.prepend(div);
+    while (feed.children.length > 500) feed.removeChild(feed.lastChild);
+  }
+
+  function copyPhoneLogs() {
+    navigator.clipboard.writeText(phoneLogLines.join('\n')).then(() => {
+      const btn = document.querySelector('[onclick="copyPhoneLogs()"]');
+      const prev = btn.textContent; btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = prev, 1500);
+    });
+  }
+
+  function switchTab(id, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('panel-' + id).classList.add('active');
+    if (id === 'sms') { document.getElementById('smsBadge').style.display='none'; smsCount=0; }
+    if (id === 'phonelogs') { document.getElementById('phoneLogBadge').style.display='none'; phoneLogCount=0; }
+  }
+
+  // ── Reset timings ──────────────────────────────────────────────────────────
+  document.getElementById('resetTimings').onclick = () => {
+    document.getElementById('gracePeriod').value  = 3500;
+    document.getElementById('stepCooldown').value = 2000;
+    document.getElementById('inputDelay').value   = 300;
+    document.getElementById('tier2Timeout').value = 30000;
+  };
+
+  // ── Enter key to send ──────────────────────────────────────────────────────
+  document.getElementById('ussdCode').addEventListener('keydown', e => { if (e.key === 'Enter') sendUSSD(); });
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  refreshDevices();
+</script>
+</body>
+</html>

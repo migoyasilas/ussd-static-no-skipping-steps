@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+/* Modular Stylesheet v2.0 - Corporate Minimalist */
+
+@theme {
+  --color-core-navy: #0f172a;
+  --color-action-blue: #2563eb;
+  --color-base-white: #ffffff;
+  --color-subtle-gray: #f8fafc;
+  --color-success: #10b981;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --core-navy: var(--color-core-navy);
+  --action-blue: var(--color-action-blue);
+  --base-white: var(--color-base-white);
+  --subtle-gray: var(--color-subtle-gray);
+  --success: var(--color-success);
+  --error: var(--color-error);
+  --warning: var(--color-warning);
+  --slate-600: var(--color-slate-600);
+  --slate-500: var(--color-slate-500);
+  --slate-400: var(--color-slate-400);
+  --slate-300: var(--color-slate-300);
+  --slate-200: var(--color-slate-200);
+  --slate-100: var(--color-slate-100);
+  --border-subtle: var(--color-slate-100);
+  
+  --mobile-px: 1.5rem;
+  --mobile-py: 1.5rem;
+  --desktop-px: 2.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    background-color: #f8fafc !important;
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-tighter;
+  }
+
+  .label-micro {
+    @apply text-[9px] font-bold uppercase tracking-widest text-slate-400 opacity-80;
+  }
+}
+
+@layer components {
+  .native-surface {
+    @apply bg-white border border-slate-100 rounded-2xl p-6 shadow-sm;
+  }
+
+  .btn-primary {
+    @apply bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-[11px] uppercase tracking-wide transition-all active:scale-[0.98] disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wide transition-all hover:bg-slate-50;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-[11px] font-semibold text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900;
+  }
+
+  .sidebar-link.active {
+    @apply bg-slate-100/80 text-slate-900 font-bold;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full;
+}

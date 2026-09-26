@@ -1,0 +1,40 @@
+[package]
+name = "epa-backend-rust"
+version = "1.0.0"
+edition = "2021"
+authors = ["Samir Bhuiyan"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.36", features = ["full"] }
+
+# Web framework & WebSocket
+axum = { version = "0.7.4", features = ["ws", "query"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+mongodb = { version = "3.1", features = ["rustls-tls"] }
+futures-util = "0.3"
+
+# Authentication
+jsonwebtoken = "9.2"
+argon2 = "0.5" # For admin password hashing
+chrono = { version = "0.4", features = ["serde"] }
+
+# Utilities
+dashmap = "5.5" # High-concurrency device registry
+regex = "1.10"  # For dynamic payment verification
+reqwest = { version = "0.11", features = ["json"] }
+uuid = { version = "1.7", features = ["v4", "serde"] }
+
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+lazy_static = "1.4"
+base64 = "0.21"
+clap = { version = "4.4", features = ["derive", "env"] }

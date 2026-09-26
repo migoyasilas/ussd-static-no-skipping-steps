@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IoT SIM Manager - Debug Command Center</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        h1, h2 { color: #64ffda; margin-top: 0; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        input, select, button { width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #333; background: #2d2d2d; color: white; box-sizing: border-box; }
+        button { background: #64ffda; color: #121212; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
+        button:hover { background: #52e0c4; }
+        .log-box { height: 400px; overflow-y: auto; background: #000; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 13px; border: 1px solid #333; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .connected { color: #64ffda; }
+        .disconnected { color: #ff5252; }
+        .msg { color: #bb86fc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>Command Center ⚡</h1>
+        <p>Target a connected Android device and execute USSD codes silently in the background.</p>
+        
+        <label>Select Target Device:</label>
+        <select id="deviceSelect">
+            <option value="">-- Waiting for devices --</option>
+        </select>
+        
+        <label>Target SIM Slot:</label>
+        <select id="simSlot">
+            <option value="">Default OS Setting</option>
+            <option value="0">SIM Slot 1</option>
+            <option value="1">SIM Slot 2</option>
+        </select>
+
+        <label>USSD Code (e.g. *121#):</label>
+        <input type="text" id="ussdCode" placeholder="*121#" value="*121#">
+
+        <label>Multi-Step Automation (Comma separated, optional):</label>
+        <input type="text" id="ussdSteps" placeholder="1, 2, 1" title="If the USSD opens a menu requiring input 1, then input 2, etc.">
+
+        <button onclick="sendUSSD()">Execute Payload</button>
+    </div>
+
+    <div class="card">
+        <h2>Live Event Stream 📡</h2>
+        <div class="log-box" id="logBox"></div>
+    </div>
+</div>
+
+<script>
+    const logBox = document.getElementById('logBox');
+    const deviceSelect = document.getElementById('deviceSelect');
+    
+    // Connect to Backend UI WebSocket
+    const ws = new WebSocket(`ws://${location.host}/ui`);
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        appendLog(data);
+        
+        // Refresh dropdown
+        if(data.type === 'DEVICE_STATUS') refreshDevices();
+    };
+
+    function appendLog(data) {
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        
+        let time = new Date().toLocaleTimeString();
+        if(data.type === 'DEVICE_STATUS') {
+            div.innerHTML = `<span style="color:#888">[${time}]</span> Device <b class="${data.status.toLowerCase()}">${data.device}</b> is ${data.status}`;
+        } else if (data.type === 'DEVICE_MSG') {
+            div.innerHTML = `<span style="color:#888">[${time}]</span> <span class="msg">REPLY from ${data.device}:</span> ${data.payload}`;
+        } else if (data.type === 'REST_MSG') {
+            div.innerHTML = `<span style="color:#888">[${time}]</span> <span class="connected">REST FALLBACK RECEIVED:</span> ${JSON.stringify(data.payload)}`;
+        } else {
+            div.innerHTML = `<span style="color:#888">[${time}]</span> ${data.message}`;
+        }
+        
+        logBox.appendChild(div);
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function refreshDevices() {
+        const res = await fetch('/api/devices');
+        const json = await res.json();
+        
+        deviceSelect.innerHTML = '';
+        if(json.devices.length === 0) {
+            deviceSelect.innerHTML = '<option value="">-- No devices connected --</option>';
+            return;
+        }
+        
+        json.devices.forEach(dev => {
+            const opt = document.createElement('option');
+            opt.value = dev;
+            opt.innerText = dev;
+            deviceSelect.appendChild(opt);
+        });
+    }
+
+    async function sendUSSD() {
+        const device = deviceSelect.value;
+        if(!device) return alert('No device selected!');
+        
+        const code = document.getElementById('ussdCode').value;
+        const stepsRaw = document.getElementById('ussdSteps').value;
+        const steps = stepsRaw ? stepsRaw.split(',').map(s => s.trim()) : [];
+        const simSlot = document.getElementById('simSlot').value;
+        
+        const reqBody = { device, ussd_code: code, steps };
+        if(simSlot !== "") reqBody.sim_slot = parseInt(simSlot);
+
+        const res = await fetch('/api/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reqBody)
+        });
+        
+        const json = await res.json();
+        if(!json.success) alert(json.error || 'Failed to send');
+    }
+    
+    // Initial fetch
+    refreshDevices();
+</script>
+
+</body>
+</html>

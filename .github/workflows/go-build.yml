@@ -1,0 +1,56 @@
+name: Go Master Backend Builder
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend-go/**'
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend-go
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Download Dependencies
+      run: |
+        go mod tidy
+        go mod download
+
+    - name: Build Windows Executable
+      env:
+        GOOS: windows
+        GOARCH: amd64
+      run: |
+        go build -v -o ussd-master-windows.exe .
+
+    - name: Build Linux Executable
+      env:
+        GOOS: linux
+        GOARCH: amd64
+      run: |
+        go build -v -o ussd-master-linux .
+
+    - name: Upload Windows Binary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: USSD-Master-Backend-Windows
+        path: backend-go/ussd-master-windows.exe
+
+    - name: Upload Linux Binary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: USSD-Master-Backend-Linux
+        path: backend-go/ussd-master-linux
